@@ -48,17 +48,17 @@ def SimpleSatProgram():
     model.Add(devices_var[0]+devices_var[1]<=1)
         # 2- triple constraints, don't use d0 with d1, if d2 is used (only work with binary var)
     # model.Add(devices_var[0]+devices_var[1]<=1).OnlyEnforceIf(devices_var[2])
-    w = [5, 2]
+    w = [5, 2] #0000 0101, 0000 0010
     # constraint to select the minimum number of devices that are enough to satisfy the workflows
     model.Add(sum(devices_var) <= sum(w))
 #    model.Add(sum(devices_var)+1 >= sum(w))
 
     #optimization 
         # secure score
-    cvss=[4,6,3,2]
-    assert len(cvss)==devices_num, "CVSS should be for al devices"
+    icvss=[4,6,3,2]
+    assert len(icvss)==devices_num, "CVSS should be for al devices"
 
-    model.Maximize( sum([v*c for v,c in zip(devices_var,cvss)]) ) 
+    model.Maximize( sum([v*c for v,c in zip(devices_var,icvss)]) ) 
 
     # Creates a solver and solves the model.
     solver = cp_model.CpSolver()
@@ -67,13 +67,13 @@ def SimpleSatProgram():
 
     if status == cp_model.OPTIMAL: # cp_model.FEASIBLE:
         for i,v in enumerate(devices_var):
-            print('x'+str(i)+'= ',solver.Value(v))
+            print('x'+str(i+1)+'= ',solver.Value(v))
         print(solver.ObjectiveValue())
     
 
 
 SimpleSatProgram()    
 
-# limitation
-# 1- each device can only used once for each function at a time. It can perform multiple diff. functions
-# 2- The model will produce partial solution if no feasible solution due to the <= constraint. 
+# limitations
+# 1- each device can only used once for each function at a time. Still it can perform multiple different functions
+# 2- The model will produce partial solution if no feasible solution due to the minimum devices selection constraint. 
