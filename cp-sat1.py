@@ -30,33 +30,45 @@ def SimpleSatProgram():
 
     # Creates the variables.
     devices_num = 4
-       # list of variable objects
-    devices_var = []
-       # creting the variables                      
-    devices_cap = { 0:'00000011',
-                    1:'00001100',
-                    2:'00110100',
-                    3:'11000100'}
-                    
-    for i in range(devices_num):
-        x = perm(devices_cap[i])
-        print('d'+str(i), x)
-        devices_var.append(model.NewIntVarFromDomain(cp_model.Domain.FromValues(x),'d'+str(i)))
+    function_num = 4
+    device_cap=np.array( [[1,0,1,0],
+                          [1,0,0,1],
+                          [0,1,1,0],
+                          [1,0,1,1]])
 
+    # to save the index of functions in the flat devicces_var list                      
+    func_wise_var = [ [] for f in range(function_num)] 
+    devices_var = []
+    for d in range(devices_num):
+        for f in range(function_num):
+            if device_cap[d][f]:
+                devices_var.append(model.NewIntVar(0,1,'x_'+str(d)+str(f)))
+                func_wise_var[f].append( len(devices_var)-1 )
+    print(func_wise_var)                
+    
     # Creates the constraints.
-        # 1- binary constraints, don't use d0 with d1 
-    model.Add(devices_var[0]+devices_var[1]<=1)
+        # 1- binary constraints, don't use x00 with x13 
+    model.Add(devices_var[0]+devices_var[3]<=1)
         # 2- triple constraints, don't use d0 with d1, if d2 is used (only work with binary var)
     # model.Add(devices_var[0]+devices_var[1]<=1).OnlyEnforceIf(devices_var[2])
-    w = [5, 2] #0000 0101, 0000 0010
+    w = np.array( [[1,0,1,0], 
+                   [0,0,1,1]])
+
     # constraint to select the minimum number of devices that are enough to satisfy the workflows
-    model.Add(sum(devices_var) <= sum(w))
-#    model.Add(sum(devices_var)+1 >= sum(w))
+        # total functions req in the workflow
+    wf = list(w.sum(axis=0))
+    for idx_f,num_f in enumerate(wf):    
+        model.Add( sum( [devices_var[i] for i in func_wise_var[idx_f] ] ) <= num_f)
+
+#    model.Add(devices_var[0]+devices_var[2]+devices_var[6]<=1 )
+#    model.Add(devices_var[4]<=0 )
+#    model.Add(devices_var[1]+devices_var[5]+devices_var[7]<=2 )
+#    model.Add(devices_var[3]+devices_var[8]<=1 )
 
     #optimization 
         # secure score
-    icvss=[4,6,3,2]
-    assert len(icvss)==devices_num, "CVSS should be for al devices"
+    icvss=[4,6,3,2,2,3,4,2,1]
+    assert len(icvss)==len(devices_var), "CVSS should be for all devices functions"
 
     model.Maximize( sum([v*c for v,c in zip(devices_var,icvss)]) ) 
 
@@ -66,8 +78,9 @@ def SimpleSatProgram():
     status = solver.Solve(model)
 
     if status == cp_model.OPTIMAL: # cp_model.FEASIBLE:
-        for i,v in enumerate(devices_var):
-            print('x'+str(i+1)+'= ',solver.Value(v))
+        print(w)
+        for v in devices_var:
+            print(v.Name(),solver.Value(v))
         print(solver.ObjectiveValue())
     
 
