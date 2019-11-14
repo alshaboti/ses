@@ -30,26 +30,29 @@ def SimpleSatProgram():
 
     # Creates the variables.
     devices_num = 4
-    functions_num = 8
        # list of variable objects
     devices_var = []
-       # creting the variables
+       # creting the variables                      
     devices_cap = { 0:'00000011',
                     1:'00001100',
-                    2:'00110000',
+                    2:'00110100',
                     3:'11000100'}
+                    
     for i in range(devices_num):
         x = perm(devices_cap[i])
-        print(x)
+        print('d'+str(i), x)
         devices_var.append(model.NewIntVarFromDomain(cp_model.Domain.FromValues(x),'d'+str(i)))
+
     # Creates the constraints.
         # 1- binary constraints, don't use d0 with d1 
     model.Add(devices_var[0]+devices_var[1]<=1)
         # 2- triple constraints, don't use d0 with d1, if d2 is used (only work with binary var)
     # model.Add(devices_var[0]+devices_var[1]<=1).OnlyEnforceIf(devices_var[2])
     w = [5, 2]
+    # constraint to select the minimum number of devices that are enough to satisfy the workflows
+    model.Add(sum(devices_var) <= sum(w))
+#    model.Add(sum(devices_var)+1 >= sum(w))
 
-    model.Add(devices_var[0]+devices_var[1]+devices_var[2]+devices_var[3] <= w[0]+w[1])
     #optimization 
         # secure score
     cvss=[4,6,3,2]
