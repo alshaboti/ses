@@ -9,21 +9,21 @@ import itertools
 import numpy as np 
 
 #developers.google.com/optimization/cp/cp_solver
-def perm(vec):
-    indx = [i for i,v in enumerate(vec) if v =='1']
-    prm = ["".join(seq) for seq in itertools.product("01",repeat=len(indx))]
-    prm_num = len(prm)
-    vec_len = len(vec)
-    prm_z_v =['0'*vec_len for i in range(prm_num)]
-    for prm_i in range(prm_num):
-        temp = list(prm_z_v[prm_i])
-        for j,bit_loc in enumerate(indx):
-            temp [bit_loc] = list(prm[prm_i])[j]
-            prm_z_v[prm_i]=int("".join(temp),2)
+#def perm(vec):
+#    indx = [i for i,v in enumerate(vec) if v =='1']
+#    prm = ["".join(seq) for seq in itertools.product("01",repeat=len(indx))]
+#    prm_num = len(prm)
+#    vec_len = len(vec)
+#    prm_z_v =['0'*vec_len for i in range(prm_num)]
+#    for prm_i in range(prm_num):
+#        temp = list(prm_z_v[prm_i])
+#        for j,bit_loc in enumerate(indx):
+#            temp [bit_loc] = list(prm[prm_i])[j]
+#            prm_z_v[prm_i]=int("".join(temp),2)
+#
+#    return prm_z_v 
 
-    return prm_z_v 
-
-def SimpleSatProgram():
+def NotSimpleSatProgram():
     """Minimal CP-SAT example to showcase calling the solver."""
     # Creates the model.
     model = cp_model.CpModel()
@@ -48,27 +48,24 @@ def SimpleSatProgram():
     
     # Creates the constraints.
         # 1- binary constraints, don't use x00 with x13 
-    model.Add(devices_var[0]+devices_var[3]<=1)
-        # 2- triple constraints, don't use d0 with d1, if d2 is used (only work with binary var)
-    # model.Add(devices_var[0]+devices_var[1]<=1).OnlyEnforceIf(devices_var[2])
-    w = np.array( [[1,0,1,0], 
-                   [0,0,1,1]])
+    model.Add(devices_var[1]+devices_var[8]<=1)
+        # 2- triple constraints, don't use x1 with x2, if x3 is used (only work with binary var)
+    model.Add(devices_var[5]+devices_var[8]<=1).OnlyEnforceIf(devices_var[0])
+
+    w = np.array( [[1,0,1,1], 
+                   [0,1,1,1]])
 
     # constraint to select the minimum number of devices that are enough to satisfy the workflows
         # total functions req in the workflow
     wf = list(w.sum(axis=0))
     for idx_f,num_f in enumerate(wf):    
+        model.Add( sum( [devices_var[i] for i in func_wise_var[idx_f] ] ) +1 > num_f)
         model.Add( sum( [devices_var[i] for i in func_wise_var[idx_f] ] ) <= num_f)
 
-#    model.Add(devices_var[0]+devices_var[2]+devices_var[6]<=1 )
-#    model.Add(devices_var[4]<=0 )
-#    model.Add(devices_var[1]+devices_var[5]+devices_var[7]<=2 )
-#    model.Add(devices_var[3]+devices_var[8]<=1 )
-
-    #optimization 
+   #optimization 
         # secure score
-    icvss=[4,6,3,2,2,3,4,2,1]
-    assert len(icvss)==len(devices_var), "CVSS should be for all devices functions"
+    icvss=[3,3,1,1,1,1,1,1,1]
+    assert len(icvss)==len(devices_var), "CVSS should be for all decision variables"
 
     model.Maximize( sum([v*c for v,c in zip(devices_var,icvss)]) ) 
 
@@ -85,7 +82,7 @@ def SimpleSatProgram():
     
 
 
-SimpleSatProgram()    
+NotSimpleSatProgram()    
 
 # limitations
 # 1- each device can only used once for each function at a time. Still it can perform multiple different functions
